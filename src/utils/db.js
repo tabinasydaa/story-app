@@ -22,12 +22,18 @@ async function getStoriesFromDb() {
 }
 
 // Menyimpan cerita ke IndexedDB
-async function saveStories(stories) {
+async function saveStoryToDb(story) {
   const db = await getDb();
   const tx = db.transaction(STORE_NAME, 'readwrite');
-  stories.forEach(story => tx.store.put(story));  // Menyimpan cerita ke IndexedDB
+  
+  // Pastikan cerita memiliki 'id'
+  if (!story.id) {
+    story.id = 'story-' + new Date().getTime();  // Jika tidak ada 'id', buat ID baru
+  }
+
+  await tx.store.put(story);  // Menyimpan cerita ke IndexedDB
   await tx.done;
-  console.log("Cerita berhasil disimpan di IndexedDB:", stories);  // Debug log
+  console.log(`Cerita dengan ID ${story.id} berhasil disimpan di IndexedDB.`);
 }
 
 // Menghapus cerita dari IndexedDB
@@ -48,4 +54,4 @@ async function clearStories() {
   console.log("All stories cleared from IndexedDB");
 }
 
-export { saveStories, getStoriesFromDb, deleteStoryFromDb, clearStories };
+export { getDb, saveStoryToDb, getStoriesFromDb, deleteStoryFromDb, clearStories };

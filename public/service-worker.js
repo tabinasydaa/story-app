@@ -2,12 +2,12 @@ const CACHE_NAME = 'story-app-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/styles/style.css',  // Perbaiki path di sini, hapus /public
+  '/styles/style.css',
   '/src/main.js',
   'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap',
   'https://unpkg.com/leaflet/dist/leaflet.css',
-  '/icons/icon-192x192.png',  // Pastikan gambar icon ter-cache juga
-  '/icons/badge-72x72.png',   // Badge untuk notifikasi
+  '/icons/vite.svg',  // Gunakan vite.svg sebagai ikon
+  '/icons/b9dc4954-33a3-4457-8e6a-6d3810c905d9.png',  // Gunakan gambar baru sebagai badge
 ];
 
 // Cache saat install
@@ -65,30 +65,34 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Notifikasi push
+// Push Notification
 self.addEventListener('push', function(event) {
-  console.log('Push event received:', event);  // Debugging log
+  console.log('Push event received:', event);
 
-  event.waitUntil((async () => {
-    let notificationData;
-    try {
-      notificationData = event.data.json();
-      console.log('Notification data:', notificationData);  // Debugging log
-    } catch (e) {
-      const fallbackText = await event.data.text();
-      notificationData = {
-        title: 'Notifikasi',
-        body: fallbackText || 'Pesan tidak tersedia',
+  event.waitUntil(
+    (async () => {
+      let notificationData = {};
+      try {
+        notificationData = event.data.json();
+        console.log('Notification data:', notificationData);
+      } catch (e) {
+        const fallbackText = await event.data.text();
+        notificationData = {
+          title: 'Notifikasi',
+          body: fallbackText || 'Pesan tidak tersedia',
+        };
+      }
+
+      const title = notificationData.title || 'Notifikasi';
+      const options = {
+        body: notificationData.body || 'Ada notifikasi baru!',
+        icon: '/vite.svg',  // Gunakan ikon yang ada
+        badge: '/badge.jpg',  // Gambar badge untuk notifikasi
       };
-    }
 
-    const title = notificationData.title || 'Notifikasi';
-    const options = {
-      body: notificationData.body || 'Ada notifikasi baru!',
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/badge-72x72.png',
-    };
-
-    self.registration.showNotification(title, options);
-  })());
+      self.registration.showNotification(title, options);
+    })()
+  );
 });
+
+

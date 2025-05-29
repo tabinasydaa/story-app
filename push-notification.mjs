@@ -61,42 +61,31 @@ app.post('/notifications/subscribe', verifyToken, (req, res) => {
   });
 });
 
-// Endpoint untuk mengirim push notification ke client
-app.post('/send-notification', verifyToken, (req, res) => {
+// Endpoint untuk mengirim notifikasi
+app.post('/send-notification', (req, res) => {
   const subscription = req.body;
-
-  // Validasi data yang diterima
   const { endpoint, p256dh, auth } = subscription.keys;
   if (!endpoint || !p256dh || !auth) {
     return res.status(400).json({ message: 'Missing required fields (endpoint, p256dh, auth)' });
   }
 
-  // Membuat pushSubscription untuk dikirim menggunakan web-push
   const pushSubscription = {
     endpoint,
-    keys: {
-      p256dh,
-      auth,
-    }
+    keys: { p256dh, auth },
   };
 
-  // Payload untuk push notification
   const payload = JSON.stringify({
-    title: 'Story Baru!',
+    title: 'Cerita Baru!',
     body: 'Ada cerita baru yang bisa kamu baca!',
   });
 
-  // Mengirim push notification menggunakan web-push
   webPush.sendNotification(pushSubscription, payload)
-    .then(response => {
-      console.log('Push notification sent:', response);
-      res.status(200).json({ message: 'Notification sent successfully' });
-    })
-    .catch(error => {
+    .then(() => res.status(200).json({ message: 'Notification sent successfully' }))
+    .catch((error) => {
       console.error('Error sending push notification:', error);
       res.status(500).json({
         message: 'Failed to send notification',
-        error: error.message
+        error: error.message,
       });
     });
 });

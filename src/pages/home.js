@@ -1,7 +1,7 @@
 import { BASE_URL } from '../utils/api.js';
-import { getStoriesFromDb, saveStories, clearStories } from '../utils/db.js';
+import { getDb, clearStories, saveStoryToDb, getStoriesFromDb } from '../utils/db.js';  // Pastikan impor sudah benar
 
-console.log('BASE_URL in home.js:', BASE_URL);
+console.log('BASE_URL di home.js:', BASE_URL);
 
 // Fungsi untuk memuat gambar dengan fallback jika gagal
 const loadImageWithFallback = (src, fallbackSrc) => {
@@ -25,22 +25,33 @@ const StoryItem = (story) => {
     </div>
   `;
 
+  // Pastikan cerita memiliki id
+  if (!story.id) {
+    story.id = 'story-' + new Date().getTime();  // Menghasilkan ID jika tidak ada
+  }
+
   // Event listener untuk tombol simpan cerita
   item.querySelector('.save-button').addEventListener('click', () => {
-    saveStoryToDb(story);
+    saveStoryToDb(story);  // Menyimpan cerita ke IndexedDB
     alert('Cerita berhasil disimpan!');
   });
 
   return item;
 };
 
-// Fungsi untuk menyimpan cerita ke IndexedDB
+// Fungsi untuk menyimpan cerita ke IndexedDB (ini akan dipanggil dari db.js)
 async function saveStoryToDb(story) {
   const db = await getDb();
-  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const tx = db.transaction('stories', 'readwrite');
+  
+  // Pastikan cerita memiliki id
+  if (!story.id) {
+    story.id = 'story-' + new Date().getTime();  // Menambahkan ID jika tidak ada
+  }
+
   await tx.store.put(story);  // Menyimpan cerita ke IndexedDB
   await tx.done;
-  console.log(`Cerita dengan ID ${story.id} berhasil disimpan.`);
+  console.log(`Cerita dengan ID ${story.id} telah disimpan di IndexedDB.`);
 }
 
 export default async function HomePage() {
@@ -50,21 +61,21 @@ export default async function HomePage() {
   // Jika token tidak ada, arahkan user untuk login
   if (!token) {
     container.innerHTML = `
-      <h2>Hai Selamat Datang!</h2>
+      <h2>Selamat Datang!</h2>
       <p>Silakan login terlebih dahulu untuk melihat cerita.</p>
     `;
     return container;
   }
 
   container.innerHTML = `
-    <h2>List Cerita</h2>
+    <h2>Daftar Cerita</h2>
     <div id="map" style="height: 300px; border-radius: 8px; margin-bottom: 1rem;"></div>
     <ul id="storyList"></ul>
   `;
 
   const storyList = container.querySelector('#storyList');
   const mapElement = container.querySelector('#map');
-  const map = L.map(mapElement).setView([-6.2, 106.8], 5);  // Set default map view
+  const map = L.map(mapElement).setView([-6.2, 106.8], 5);  // Set tampilan peta default
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
   // Fungsi untuk mengambil cerita dari API
@@ -79,7 +90,7 @@ export default async function HomePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Error Data:', errorData);
+        console.error('Data Error:', errorData);
         throw new Error('Gagal mengambil cerita dari server');
       }
 
@@ -93,13 +104,14 @@ export default async function HomePage() {
     }
   };
 
-  // Mengambil cerita dari cache (IndexedDB)
-  const cachedStories = await getStoriesFromDb();  // Pastikan data dari IndexedDB diambil dengan benar
+  // Mengambil cerita dari IndexedDB dan hanya menampilkan yang terbaru
+  const cachedStories = await getStoriesFromDb();
   console.log("Cerita dari IndexedDB:", cachedStories);  // Debug log untuk memastikan data ada
 
   if (cachedStories.length) {
     console.log('Menampilkan cerita dari cache...');
     cachedStories.forEach(story => {
+      // Menampilkan cerita yang sudah ada, sesuai dengan data yang terbaru
       const item = StoryItem(story);
       storyList.appendChild(item);
       if (story.lat && story.lon) {
@@ -124,7 +136,7 @@ export default async function HomePage() {
       // Jika data berhasil diambil, kosongkan daftar cerita lama
       storyList.innerHTML = '';  // Kosongkan daftar cerita yang lama
       await clearStories();  // Hapus data lama di IndexedDB
-      await saveStories(listStory);  // Simpan cerita baru ke IndexedDB
+      await saveStoryToDb(listStory);  // Simpan cerita baru ke IndexedDB
 
       // Tampilkan cerita yang baru
       listStory.forEach(story => {

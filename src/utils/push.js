@@ -13,20 +13,18 @@ function urlBase64ToUint8Array(base64String) {
 export async function subscribeUserToPush() {
   try {
     const registration = await navigator.serviceWorker.ready;
-
     const existingSubscription = await registration.pushManager.getSubscription();
+
     if (existingSubscription) {
-      console.log('[Push] Subscription lama ditemukan, akan dihapus...');
-      await existingSubscription.unsubscribe();
+      console.log('[Push] Subscription already exists');
+      return;
     }
 
-    // Ambil token dari localStorage dan pastikan token ada
     const token = localStorage.getItem('token');
     if (!token) {
       throw new Error('Token tidak ditemukan. Pastikan Anda sudah login terlebih dahulu.');
     }
 
-    // Langsung subscribe ke PushManager
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
@@ -34,16 +32,12 @@ export async function subscribeUserToPush() {
 
     let subscriptionData = subscription.toJSON();
 
-    // Hapus expirationTime dan properti lainnya yang tidak diperlukan
-    delete subscriptionData.expirationTime;
-    delete subscriptionData.timestamp;
-
-    // Kirim subscription ke server dengan Authorization header yang mengandung token
-    const result = await subscribePushNotification(subscriptionData, token);
-    console.log('[Push] Subscription sent to server:', result);
+    // Kirim subscription ke server
+    await subscribePushNotification(subscriptionData, token);
+    console.log('[Push] Subscription sent to server:', subscriptionData);
   } catch (error) {
     console.error('[Push] Subscription failed:', error.message);
     alert('Gagal berlangganan push notification: ' + error.message);
-    throw error;
   }
 }
+
